@@ -1,73 +1,49 @@
-# An iterator is an object that contains a countable number of values.
-# An iterator is an object that can be iterated upon, meaning that you can traverse through all the values.
-# Technically, in Python, an iterator is an object which implements the iterator protocol, which consist of the methods __iter__() and __next__().
-#1eturn an iterator from a tuple, and print each value:
-mytuple = ("apple", "banana", "cherry")
-myit = iter(mytuple)
+1
+def square_generator(n):
+    for i in range(n + 1):
+        yield i * i
 
-print(next(myit))
-print(next(myit))
-print(next(myit))
+a=int(input())
 
-#2Strings are also iterable objects, containing a sequence of characters:
-mystr = "banana"
-myit = iter(mystr)
+for num in square_generator(a):
+    print(num)
 
-print(next(myit))
-print(next(myit))
-print(next(myit))
-print(next(myit))
-print(next(myit))
-print(next(myit))
+2
+def even(n):
+    for i in range(n + 1):
+        if i % 2 == 0:
+            yield i
 
-#3Iterate the values of a tuple:
-mytuple = ("apple", "banana", "cherry")
 
-for x in mytuple:
-  print(x)
+n = int(input())
 
-#4 Iterate the characters of a string:
-mystr = "banana"
+print(",".join(str(num) for num in even(n)))
 
-for x in mystr:
-  print(x)
+3
+def div_by3and4(n):
+    for i in range(n + 1):
+        if i%3==0 and i%4==0:
+            yield i
 
-#5 Create an iterator that returns numbers, starting with 1, and each sequence will increase by one (returning 1,2,3,4,5 etc.):
-class MyNumbers:
-  def __iter__(self):
-    self.a = 1
-    return self
 
-  def __next__(self):
-    x = self.a
-    self.a += 1
-    return x
+n = int(input())
 
-myclass = MyNumbers()
-myiter = iter(myclass)
+for num in div_by3and4(n):
+    print(num)
 
-print(next(myiter))
-print(next(myiter))
-print(next(myiter))
-print(next(myiter))
-print(next(myiter))
+4
+def squares(a, b):
+    for i in range(a, b + 1):
+        yield i * i
 
-#6 Stop after 20 iterations:
-class MyNumbers:
-  def __iter__(self):
-    self.a = 1
-    return self
+for x in squares(3, 7):
+    print(x)
 
-  def __next__(self):
-    if self.a <= 20:
-      x = self.a
-      self.a += 1
-      return x
-    else:
-      raise StopIteration
+5
+def count(n):
+    while n >= 0:
+        yield n
+        n -= 1
 
-myclass = MyNumbers()
-myiter = iter(myclass)
-
-for x in myiter:
-  print(x)
+for num in count(5):
+    print(num)
