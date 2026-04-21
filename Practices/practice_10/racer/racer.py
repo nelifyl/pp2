@@ -1,237 +1,152 @@
-# Импорт необходимых библиотек
 import pygame
 import sys
 import random
-import time
 import os
 from pygame.locals import *
 
-# Устанавливаем правильную рабочую директорию
-script_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_dir)
-print(f"Рабочая директория: {os.getcwd()}")
-
-# Инициализация Pygame
 pygame.init()
 
-# Настройка частоты кадров (FPS)
+# ================= ПУТИ К ФАЙЛАМ =================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMAGES_DIR = os.path.join(BASE_DIR, "images")
+
+# ================= НАСТРОЙКИ =================
 FPS = 60
 FramePerSec = pygame.time.Clock()
 
-# Определение цветов в формате RGB
-BLUE  = (0, 0, 255)
-RED   = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLACK = (0, 0, 0)
+SCREEN_WIDTH = 700
+SCREEN_HEIGHT = 700
+
 WHITE = (255, 255, 255)
-YELLOW = (255, 255, 0)
+BLACK = (0, 0, 0)
+GRAY = (50, 50, 50)
 
-# Константы экрана и игры
-SCREEN_WIDTH = 400
-SCREEN_HEIGHT = 600
-SPEED = 2          # Начальная скорость врага
-COINS_COLLECTED = 0 # Счётчик собранных монет
-
-# Коэффициент уменьшения размера (чем меньше число, тем меньше объект)
-SCALE_FACTOR = 0.125  # Уменьшаем в 2 раза (0.5 = 50% от оригинального размера)
-
-# Настройка шрифтов для отображения текста
-font = pygame.font.SysFont("Verdana", 60)
-font_small = pygame.font.SysFont("Verdana", 20)
-game_over = font.render("Game Over", True, BLACK)
-
-# Проверяем существование папки images
-if not os.path.exists("images"):
-    print("ОШИБКА: Папка 'images' не найдена!")
-    print(f"Текущая директория: {os.getcwd()}")
-    print("Файлы в директории:", os.listdir('.'))
-    sys.exit()
-
-print("Файлы в папке images:", os.listdir("images"))
-
-# Функция для загрузки и масштабирования изображений
-def load_and_scale_image(path, scale):
-    """Загружает изображение и масштабирует его"""
-    try:
-        original_image = pygame.image.load(path)
-        # Получаем оригинальный размер
-        original_width = original_image.get_width()
-        original_height = original_image.get_height()
-        # Вычисляем новый размер
-        new_width = int(original_width * scale)
-        new_height = int(original_height * scale)
-        # Масштабируем изображение
-        scaled_image = pygame.transform.scale(original_image, (new_width, new_height))
-        print(f"Загружено {path}: {original_width}x{original_height} -> {new_width}x{new_height}")
-        return scaled_image
-    except Exception as e:
-        print(f"Ошибка загрузки {path}: {e}")
-        return None
-
-# Загрузка и масштабирование изображений
-background = pygame.image.load("images/road.png")     # Фон не масштабируем
-player_img = load_and_scale_image("images/car1.png", SCALE_FACTOR)    # Уменьшенная машина игрока
-enemy_img = load_and_scale_image("images/car2.png", SCALE_FACTOR)     # Уменьшенная вражеская машина
-coin_img = load_and_scale_image("images/coin.png", SCALE_FACTOR)      # Уменьшенная монета
-
-# Проверка, что все изображения загружены
-if None in [player_img, enemy_img, coin_img]:
-    print("Ошибка: не удалось загрузить некоторые изображения")
-    sys.exit()
-
-print("Все изображения загружены и масштабированы успешно!")
-
-# Создание окна игры
 DISPLAYSURF = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-DISPLAYSURF.fill(WHITE)
-pygame.display.set_caption("Racer - Collect Coins!")
+pygame.display.set_caption("Racer")
+
+font = pygame.font.SysFont("Verdana", 30)
+
+score = 0
+coins_collected = 0
+speed = 5
 
 
+# ================= ENEMY =================
 class Enemy(pygame.sprite.Sprite):
-    """
-    Класс вражеского автомобиля.
-    Двигается сверху вниз с увеличивающейся скоростью.
-    """
     def __init__(self):
         super().__init__()
-        self.image = enemy_img
+        img = pygame.image.load(os.path.join(IMAGES_DIR, "enemy.png"))
+        self.image = pygame.transform.smoothscale(img, (90, 140))
         self.rect = self.image.get_rect()
-        # Случайное начальное положение по горизонтали, сверху экрана
-        self.rect.center = (random.randint(40, SCREEN_WIDTH - 40), 0)
+        self.reset()
+
+    def reset(self):
+        self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+        self.rect.y = -150
 
     def move(self):
-        """Перемещает врага вниз. Если враг ушёл за экран, возрождает его сверху."""
-        self.rect.move_ip(0, SPEED)
+        global score, speed
+        self.rect.move_ip(0, speed)
+
         if self.rect.top > SCREEN_HEIGHT:
-            self.rect.top = 0
-            self.rect.center = (random.randint(40, SCREEN_WIDTH - 40), 0)
+            score += 1
+            speed += 0.2
+            self.reset()
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
 
 
+# ================= PLAYER =================
 class Player(pygame.sprite.Sprite):
-    """
-    Класс игрока (машина игрока).
-    Управляется стрелками влево/вправо, не может выйти за границы экрана.
-    """
     def __init__(self):
         super().__init__()
-        self.image = player_img
+        img = pygame.image.load(os.path.join(IMAGES_DIR, "car.png"))
+        self.image = pygame.transform.smoothscale(img, (90, 140))
         self.rect = self.image.get_rect()
-        self.rect.center = (160, 520)  # Фиксированное положение по вертикали внизу
+        self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 120)
 
-    def move(self):
-        """Обрабатывает нажатия клавиш и перемещает игрока."""
+    def update(self):
         pressed_keys = pygame.key.get_pressed()
-        # Движение влево с проверкой границы
-        if self.rect.left > 0:
-            if pressed_keys[K_LEFT]:
-                self.rect.move_ip(-5, 0)
-        # Движение вправо с проверкой границы
-        if self.rect.right < SCREEN_WIDTH:
-            if pressed_keys[K_RIGHT]:
-                self.rect.move_ip(5, 0)
+
+        if pressed_keys[K_LEFT] and self.rect.left > 0:
+            self.rect.move_ip(-7, 0)
+
+        if pressed_keys[K_RIGHT] and self.rect.right < SCREEN_WIDTH:
+            self.rect.move_ip(7, 0)
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
 
 
+# ================= COIN =================
 class Coin(pygame.sprite.Sprite):
-    """
-    Класс монеты, которую собирает игрок.
-    Появляется в случайном месте дороги.
-    """
     def __init__(self):
         super().__init__()
-        self.image = coin_img
+        img = pygame.image.load(os.path.join(IMAGES_DIR, "coin.png"))
+        self.image = pygame.transform.smoothscale(img, (40, 40))
         self.rect = self.image.get_rect()
-        # Случайное появление монеты на дороге (с отступами от краёв)
-        self.rect.center = (
-            random.randint(40, SCREEN_WIDTH - 40),
-            random.randint(-100, -40)  # Появляется сверху за экраном
-        )
+        self.reset()
+
+    def reset(self):
+        self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+        self.rect.y = random.randint(-300, -50)
 
     def move(self):
-        """
-        Перемещает монету вниз.
-        Если монета уходит за экран, она возрождается в новом случайном месте.
-        """
-        self.rect.move_ip(0, SPEED - 2)  # Монета движется чуть медленнее врага
+        self.rect.move_ip(0, speed)
         if self.rect.top > SCREEN_HEIGHT:
-            self.respawn()
+            self.reset()
 
-    def respawn(self):
-        """Возрождает монету в случайном месте сверху."""
-        self.rect.center = (
-            random.randint(40, SCREEN_WIDTH - 40),
-            random.randint(-100, -40)
-        )
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
 
 
-# Создание объектов игрока, врага и монеты
+# ================= СОЗДАЕМ ОБЪЕКТЫ =================
 P1 = Player()
 E1 = Enemy()
-coin = Coin()
+C1 = Coin()
 
-# Создание групп спрайтов для удобного управления
-enemies = pygame.sprite.Group()
-enemies.add(E1)
 
-coins_group = pygame.sprite.Group()
-coins_group.add(coin)
-
-all_sprites = pygame.sprite.Group()
-all_sprites.add(P1)
-all_sprites.add(E1)
-all_sprites.add(coin)
-
-# Пользовательское событие для увеличения скорости врага каждую секунду
-INC_SPEED = pygame.USEREVENT + 1
-pygame.time.set_timer(INC_SPEED, 1000)
-
-# --- Основной игровой цикл ---
+# ================= GAME LOOP =================
 while True:
-    # Обработка событий
+
+    # события
     for event in pygame.event.get():
-        if event.type == INC_SPEED:
-            SPEED += 0.5   # Плавное увеличение сложности
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
 
-    # Отрисовка фона (дороги)
-    DISPLAYSURF.blit(background, (0, 0))
+    # обновление
+    P1.update()
+    E1.move()
+    C1.move()
 
-    # Отображение текущего количества собранных монет в правом верхнем углу
-    coin_text = font_small.render(f"Coins: {COINS_COLLECTED}", True, BLACK)
-    text_width = coin_text.get_width()
-    DISPLAYSURF.blit(coin_text, (SCREEN_WIDTH - text_width - 10, 10))
-
-    # Движение и отрисовка всех спрайтов
-    for entity in all_sprites:
-        DISPLAYSURF.blit(entity.image, entity.rect)
-        entity.move()
-
-    # --- Проверка сбора монет ---
-    if pygame.sprite.collide_rect(P1, coin):
-        COINS_COLLECTED += 1
-        coin.respawn()  # Возрождаем монету в новом месте
-
-    # --- Проверка столкновения с врагом (конец игры) ---
-    if pygame.sprite.spritecollideany(P1, enemies):
-        time.sleep(0.5)  # Небольшая пауза для эффекта
-
-        # Отображение экрана "Game Over"
-        DISPLAYSURF.fill(RED)
-        DISPLAYSURF.blit(game_over, (30, 250))
-        # Также показываем финальный счёт монет
-        final_score_text = font_small.render(f"Coins collected: {COINS_COLLECTED}", True, BLACK)
-        final_score_rect = final_score_text.get_rect(center=(SCREEN_WIDTH // 2, 320))
-        DISPLAYSURF.blit(final_score_text, final_score_rect)
+    # столкновение с врагом
+    if pygame.sprite.collide_rect(P1, E1):
+        text = font.render("GAME OVER", True, BLACK)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        DISPLAYSURF.blit(text, rect)
         pygame.display.update()
-
-        # Удаляем все спрайты и ждём перед выходом
-        for entity in all_sprites:
-            entity.kill()
-        time.sleep(2)
+        pygame.time.delay(2000)
         pygame.quit()
         sys.exit()
 
-    # Обновление экрана и тактирование
+    # сбор монет
+    if pygame.sprite.collide_rect(P1, C1):
+        coins_collected += 1
+        C1.reset()
+
+    # рисование
+    DISPLAYSURF.fill(GRAY)
+    P1.draw(DISPLAYSURF)
+    E1.draw(DISPLAYSURF)
+    C1.draw(DISPLAYSURF)
+
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    coin_text = font.render(f"Coins: {coins_collected}", True, WHITE)
+
+    DISPLAYSURF.blit(score_text, (20, 20))
+    DISPLAYSURF.blit(coin_text, (SCREEN_WIDTH - 200, 20))
+
     pygame.display.update()
     FramePerSec.tick(FPS)
