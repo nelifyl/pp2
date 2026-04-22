@@ -142,7 +142,7 @@ while True:
 
     # сбор монет
     if pygame.sprite.collide_rect(P1, C1):
-        coins_collected += C1.value   # ⭐ добавляем ценность монеты
+        coins_collected += C1.value   # добавляем ценность монеты
         C1.reset()
 
     # рисование
