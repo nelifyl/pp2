@@ -1,0 +1,6 @@
+first_name,last_name,email,birthday,group,phone,phone_type
+Alice,Smith,alice@gmail.com,1990-05-15,Family,123456789,mobile
+Bob,Brown,bob@company.com,1985-08-22,Work,987654321,work
+Charlie,White,charlie@yahoo.com,1992-11-30,Friend,555555555,home
+Diana,Prince,diana@example.com,1988-03-14,Family,444333222,mobile
+Eve,Adams,eve@gmail.com,1995-07-19,Other,777888999,work
